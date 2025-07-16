@@ -1,0 +1,166 @@
+# Maker-Checker Product Dashboard Documentation
+
+This documentation describes the updated architecture for the Maker-Checker Dashboard with a **Product** workflow featuring columns: `product_name`, `product_code`, and `ROI`.
+
+---
+
+## High-Level Design (HLD)
+
+### 1. Architecture Overview
+
+```mermaid
+flowchart TD
+    User["User Browser"]
+    Frontend["ReactJS Frontend (Firebase Hosting/GCS)"]
+    Backend["Spring Boot Backend (Cloud Run/App Engine)"]
+    Database["MySQL/Cloud SQL"]
+
+    User -- HTTP(S) --> Frontend
+    Frontend -- REST API (JWT) --> Backend
+    Backend -- JDBC --> Database
+```
+
+#### Components
+
+- **Frontend (ReactJS)**
+  - ProductMakerDashboard (Maker)
+  - Auth/Login
+  - API integration with backend
+
+- **Backend (Spring Boot)**
+  - Product entity, repository, controller
+  - JWT authentication
+  - Role-based access (`Maker` for product creation)
+
+- **Database (MySQL/Cloud SQL)**
+  - `user` table
+  - `product` table with `product_name`, `product_code`, `roi`, `maker`
+
+#### Data Flow
+
+1. **Login:** User authenticates, receives JWT.
+2. **Product Creation:** Maker submits product info via dashboard; JWT sent in API request.
+3. **Storage:** Backend verifies role, persists product to the database.
+
+---
+
+## Low-Level Design (LLD)
+
+### 1. Database Schema
+
+#### user Table
+
+| Field    | Type    | Description        |
+|----------|---------|-------------------|
+| id       | bigint  | Primary key       |
+| username | varchar | Unique            |
+| password | varchar | Hashed (in prod)  |
+| role     | varchar | "Maker"/"Checker" |
+
+#### product Table
+
+| Field        | Type    | Description                 |
+|--------------|---------|----------------------------|
+| id           | bigint  | Primary key                |
+| maker        | varchar | Username of Maker          |
+| product_name | varchar | Name of the product        |
+| product_code | varchar | Unique code for the product|
+| roi          | double  | Return on Investment (ROI) |
+
+---
+
+### 2. Backend Classes & APIs
+
+**Entities**
+- `User`: id, username, password, role
+- `Product`: id, maker, product_name, product_code, roi
+
+**Repositories**
+- `UserRepository`: findByUsername
+- `ProductRepository`: CRUD
+
+**Controllers**
+- `AuthController`
+    - `POST /api/auth/login`: Authenticate, return JWT
+- `ProductController`
+    - `GET /api/products`: List all products
+    - `POST /api/products`: Create product (Maker only)
+
+**Security**
+- `JwtUtil`: Generate/validate JWT, extract username/role
+- `SecurityConfig`: Restrict endpoints, require JWT
+
+---
+
+### 3. Frontend Components
+
+- **Login Component:** Form for username/password, calls `/api/auth/login`
+- **ProductMakerDashboard Component:**
+    - Form for product_name, product_code, ROI
+    - Table displaying products created by Maker
+    - Calls `/api/products` with JWT
+
+---
+
+## Entity Relationship Diagram (ERD)
+
+```mermaid
+erDiagram
+    USER {
+        bigint id PK
+        string username
+        string password
+        string role
+    }
+    PRODUCT {
+        bigint id PK
+        string maker
+        string product_name
+        string product_code
+        double roi
+    }
+    USER ||--o{ PRODUCT : creates
+```
+
+---
+
+## Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+    participant D as Database
+
+    U->>F: Login credentials
+    F->>B: POST /api/auth/login
+    B->>D: Validate user
+    B-->>F: JWT + user info
+    U->>F: Submit product info
+    F->>B: POST /api/products (JWT)
+    B->>D: Store product
+    B-->>F: Product created
+    F->>B: GET /api/products (JWT)
+    B->>D: Fetch products
+    B-->>F: Products list
+```
+
+---
+
+## Extensibility
+
+- Add product approval workflow for Checker
+- Add product status or audit logs
+- Add pagination/filtering for products
+- Use password hashing in production
+
+---
+
+## Deployment Notes
+
+- Frontend built with React, deployed to Firebase Hosting or GCS
+- Backend deployed to Cloud Run/App Engine, connects to Cloud SQL (MySQL)
+- Database schema auto-created by JPA or via migration scripts
+
+---

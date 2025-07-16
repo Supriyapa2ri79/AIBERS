@@ -1,1 +1,7 @@
-
+runtime: java17
+instance_class: F1
+env_variables:
+  SPRING_DATASOURCE_URL: jdbc:mysql://<CLOUD_SQL_IP>:3306/aibers_db
+  SPRING_DATASOURCE_USERNAME: <USER>
+  SPRING_DATASOURCE_PASSWORD: <PASSWORD>
+  JWT_SECRET: <YOUR_JWT_SECRET>

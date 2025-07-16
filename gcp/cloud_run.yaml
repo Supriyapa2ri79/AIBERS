@@ -1,1 +1,18 @@
-
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: aibers-backend
+spec:
+  template:
+    spec:
+      containers:
+        - image: gcr.io/<PROJECT_ID>/aibers-backend:latest
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://<CLOUD_SQL_IP>:3306/aibers_db
+            - name: SPRING_DATASOURCE_USERNAME
+              value: <USER>
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: <PASSWORD>
+            - name: JWT_SECRET
+              value: <YOUR_JWT_SECRET>

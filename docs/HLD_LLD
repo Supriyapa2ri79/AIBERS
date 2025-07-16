@@ -1,0 +1,138 @@
+🟢 High-Level Design (HLD)
+1. Architecture Diagram
+Code
+[User Browser]
+     |
+     v
+[ReactJS Frontend]   <-->   [Spring Boot Backend]   <-->   [MySQL/Cloud SQL]
+     |                        | (REST API, JWT)          | (Data persistence)
+     v                        v
+[Firebase Hosting / GCS]   [Cloud Run/App Engine]     [Cloud SQL]
+2. Major Components
+Frontend (ReactJS)
+
+Login UI
+Maker dashboard (create/view requests)
+Checker dashboard (approve/reject requests)
+REST API calls (with JWT in headers)
+Backend (Java Spring Boot)
+
+Authentication REST endpoints (/api/auth/login)
+Request management endpoints (/api/requests)
+JWT-based authorization
+User and Request models, repositories (JPA)
+Connects to MySQL/Cloud SQL
+Database (MySQL/Cloud SQL)
+
+user table: stores username, password, role
+request table: stores maker, description, status
+Deployment (GCP)
+
+Frontend: Firebase Hosting or GCS bucket
+Backend: Cloud Run or App Engine
+Database: Cloud SQL
+3. Data Flow
+Login
+
+User submits credentials to frontend → frontend calls /api/auth/login → backend verifies, returns JWT.
+JWT is stored in frontend (localStorage).
+Dashboard
+
+Frontend sends requests to backend with JWT.
+Backend verifies JWT, authorizes actions, interacts with DB.
+Responses returned to frontend, which displays them.
+🟢 Low-Level Design (LLD)
+1. Database Schema
+User Table
+id	username	password	role
+PK	string	string	string
+Request Table
+id	maker	description	status
+PK	string	string	string
+2. Backend Classes & APIs
+Entities
+
+User: id, username, password, role
+Request: id, maker, description, status
+Repositories
+
+UserRepository: findByUsername
+RequestRepository: CRUD
+Controllers
+
+AuthController
+POST /api/auth/login: returns JWT and user info
+MakerCheckerController
+GET /api/requests: returns all requests
+POST /api/requests: create a request (role=Maker)
+PUT /api/requests/{id}: approve/reject (role=Checker)
+Security
+
+JwtUtil: generate/validate JWT, extract username/role
+SecurityConfig: restrict endpoints, require JWT
+3. Frontend Components & Logic
+Login Component
+
+Form (username, password), calls /api/auth/login
+Dashboard Component
+
+Displays user role
+If Maker: create request form, my requests table
+If Checker: pending requests table, approve/reject buttons
+API Calls
+
+All calls include Authorization: Bearer <JWT> header
+4. Deployment Details
+Cloud SQL: Terraform script provisions MySQL instance and database.
+Backend: Dockerized Spring Boot app, environment variables for DB/JWT secret, deployed to Cloud Run or App Engine.
+Frontend: Built with npm run build, static files deployed to Firebase Hosting or GCS.
+🟢 Sequence Diagram (Simplified)
+Code
+User -> Frontend: Login credentials
+Frontend -> Backend: POST /api/auth/login
+Backend -> DB: Validate user
+Backend -> Frontend: JWT + user info
+User -> Frontend: Create/View dashboard
+Frontend -> Backend: API calls with JWT
+Backend -> DB: CRUD on requests
+Backend -> Frontend: Data (requests, status, etc)
+🟢 Example: LLD Class Diagram (Backend)
+Code
+User
+│ id: Long
+│ username: String
+│ password: String
+│ role: String
+
+Request
+│ id: Long
+│ maker: String
+│ description: String
+│ status: String
+
+UserRepository (extends JpaRepository<User, Long>)
+│ findByUsername(username): User
+
+RequestRepository (extends JpaRepository<Request, Long>)
+
+AuthController
+│ POST /api/auth/login
+
+MakerCheckerController
+│ GET /api/requests
+│ POST /api/requests
+│ PUT /api/requests/{id}
+
+JwtUtil
+│ generateToken(username, role)
+│ extractUsername(token)
+│ extractRole(token)
+🟢 Error Handling
+Invalid login: return error message
+Unauthorized endpoint: return 401
+Invalid request/role: return 403
+🟢 Extensibility
+Add registration endpoint
+Use password hashing (BCrypt)
+Add audit log table
+Pagination/filtering for requests
